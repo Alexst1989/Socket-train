@@ -79,7 +79,7 @@ public class MainServer extends Processor {
 
                     ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
                     clientChannel.read( buf );
-
+                    buf.flip();
                     ByteBufferUtils.printByteBuffer( buf );
 
                     // a channel is ready for reading

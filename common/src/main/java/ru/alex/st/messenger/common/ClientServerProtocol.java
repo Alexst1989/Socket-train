@@ -5,7 +5,7 @@ public class ClientServerProtocol {
     private ClientServerProtocolState currentState;
 
     public enum ClientServerProtocolState {
-        CONNECTED, IDENTIFICATION, READY_TO_WRITE, CLOSED
+        CONNECTED, IDENTIFICATION, READY_TO_WRITE, CLOSED, WAIT
     }
 
     public ClientServerProtocol() {

@@ -11,8 +11,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
+import java.util.concurrent.LinkedBlockingDeque;
 
 
 /*
@@ -25,11 +24,13 @@ public class ServerClient extends Processor {
 
     private static final Logger LOGGER = LogManager.getLogger( ServerClient.class );
 
-    private int port;
-
     private static final int BUFFER_SIZE = 8096;
 
-    private LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+    private static final int DEFAULT_SLEEP_MILLIS = 1000;
+
+    private int port;
+
+    private LinkedBlockingDeque<Message> deque = new LinkedBlockingDeque<>();
 
     private SocketChannel channel;
 
@@ -45,10 +46,13 @@ public class ServerClient extends Processor {
 
     private byte connectionCounter;
 
+    private String id;
+
     private static final byte RECONNECTION_ATTEMTS = 10;
 
-    public ServerClient( int port ) {
+    public ServerClient( int port, String id ) {
         this.port = port;
+        this.id = id;
         this.writeBuffer = ByteBuffer.allocateDirect( BUFFER_SIZE );
         this.readBuffer = ByteBuffer.allocateDirect( BUFFER_SIZE );
     }
@@ -64,6 +68,9 @@ public class ServerClient extends Processor {
                 break;
             case CLOSED:
                 clientToServerProtocol.setState( doConnect() );
+                break;
+            case WAIT:
+                clientToServerProtocol.setState( doWait( clientToServerProtocol.getCurrentState() ) );
                 break;
         }
     }
@@ -85,7 +92,7 @@ public class ServerClient extends Processor {
                 if ( established ) {
                     LOGGER.info( "Connection to [{}] established", port );
 
-                    return ClientServerProtocolState.IDENTIFICATION;
+                    return toIdentification();
                 } else {
                     LOGGER.info( "Connection failed" );
                     return ClientServerProtocolState.CLOSED;
@@ -105,43 +112,47 @@ public class ServerClient extends Processor {
 
     private void onConnectionNextAttempt() {
         if ( this.connectionCounter > 0 ) {
-            try {
-                LOGGER.info( "Number of attempt: {}", this.connectionCounter );
-                Thread.sleep( 1000 );
-            } catch ( InterruptedException e ) {
-                LOGGER.warn( e );
-            }
+            LOGGER.info( "Number of attempt: {}", this.connectionCounter );
+            sleepFor( DEFAULT_SLEEP_MILLIS );
         }
         this.connectionCounter += 1;
     }
 
+    private void sleepFor( long millis ) {
+        try {
+            LOGGER.info( "Sleeping {} millis...", millis );
+            Thread.sleep( millis );
+        } catch ( InterruptedException e ) {
+            LOGGER.warn( e );
+        }
+    }
+
+    private ClientServerProtocolState doWait( ClientServerProtocolState nextState ) {
+        sleepFor( DEFAULT_SLEEP_MILLIS );
+        return nextState;
+    }
 
     private ClientServerProtocolState doWrite() {
 
         Message message = null;
         try {
             //TODO must be sure that connection still alive
-            message = queue.take();
+            message = deque.take();
         } catch ( InterruptedException e ) {
             LOGGER.error( e );
         }
         if ( message != null ) {
-            byte[] bytes = message.getBytes();
-            writeToConsummer( bytes, buf -> {
-                try {
-                    channel.write( buf );
-                } catch ( IOException e ) {
-                    LOGGER.error( "Exception while writing to channel", e );
-                }
-            } );
+            return writeToConsummer( message, ClientServerProtocolState.READY_TO_WRITE, ClientServerProtocolState.CLOSED );
         }
 
         return ClientServerProtocolState.READY_TO_WRITE;
     }
 
 
-    private void writeToConsummer( byte[] source, Consumer<ByteBuffer> consumer ) {
+    private ClientServerProtocolState writeToConsummer( Message message, ClientServerProtocolState success,
+                                                        ClientServerProtocolState fail ) {
         ByteBuffer buffer = writeModeBuffer();
+        byte[] source = message.getBytes();
         int count = partCount( source );
         int offset = 0;
         int length = BUFFER_SIZE;
@@ -149,11 +160,18 @@ public class ServerClient extends Processor {
             if ( source.length < length + offset ) {
                 length = source.length - offset;
             }
-            buffer.put( source, offset, length );
-            consumer.accept( readModeBuffer() );
+            try {
+                channel.write( readModeBuffer() );
+            } catch ( IOException e ) {
+                LOGGER.error( "Exception while writing to channel", e );
+                return fail;
+            } finally {
+                deque.offerFirst( message );
+            }
             offset += BUFFER_SIZE;
             buffer.clear();
         }
+        return success;
     }
 
     private int partCount( byte[] array ) {
@@ -177,22 +195,8 @@ public class ServerClient extends Processor {
     }
 
     public void sendMessage( Message message ) {
-        queue.offer( message );
+        deque.offer( message );
     }
 
-
-    private Message getMessage() {
-        return new Message() {
-            @Override
-            public MessageType getMessageType() {
-                return MessageType.BYTES;
-            }
-
-            @Override
-            public byte[] getBytes() {
-                return new byte[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-            }
-        };
-    }
 
 }
