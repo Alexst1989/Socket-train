@@ -151,27 +151,29 @@ public class ServerClient extends Processor {
 
     private ClientServerProtocolState writeToConsummer( Message message, ClientServerProtocolState success,
                                                         ClientServerProtocolState fail ) {
-        ByteBuffer buffer = writeModeBuffer();
-        byte[] source = message.getBytes();
-        int count = partCount( source );
-        int offset = 0;
-        int length = BUFFER_SIZE;
-        for ( int i = 0; i < count; i++ ) {
-            if ( source.length < length + offset ) {
-                length = source.length - offset;
-            }
-            try {
+        try {
+            byte[] source = message.getBytes();
+            int count = partCount( source );
+            int offset = 0;
+            int length = BUFFER_SIZE;
+            for ( int i = 0; i < count; i++ ) {
+                if ( source.length < length + offset ) {
+                    length = source.length - offset;
+                }
+                ByteBuffer buffer = writeModeBuffer();
+                buffer.put( source, offset, length );
                 channel.write( readModeBuffer() );
-            } catch ( IOException e ) {
-                LOGGER.error( "Exception while writing to channel", e );
-                return fail;
-            } finally {
-                deque.offerFirst( message );
+                offset += BUFFER_SIZE;
+                this.clearBuffer();
             }
-            offset += BUFFER_SIZE;
-            buffer.clear();
+            return success;
+        } catch ( IOException e ) {
+            LOGGER.error( "Exception while writing to channel", e );
+            deque.offerFirst( message );
+            return fail;
+        } finally {
+            this.clearBuffer();
         }
-        return success;
     }
 
     private int partCount( byte[] array ) {
@@ -191,6 +193,12 @@ public class ServerClient extends Processor {
             this.writeBuffer.flip();
             writeFlipped = true;
         }
+        return this.writeBuffer;
+    }
+
+    private ByteBuffer clearBuffer() {
+        this.writeBuffer.clear();
+        writeFlipped = false;
         return this.writeBuffer;
     }
 
