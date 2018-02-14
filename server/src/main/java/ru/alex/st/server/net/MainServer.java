@@ -65,39 +65,42 @@ public class MainServer extends Processor {
 
             while ( keyIterator.hasNext() ) {
                 SelectionKey key = keyIterator.next();
-                if ( key.isAcceptable() ) {
-                    registerClient( key );
-                    // a connection was accepted by a ServerSocketChannel.
-                    LOGGER.info( "Key [{}] is Acceptable", key );
-                } else if ( key.isConnectable() ) {
-                    // a connection was established with a remote server.
-                    LOGGER.info( "Key [{}] is Connectable", key );
-                } else if ( key.isReadable() ) {
-                    SocketChannel clientChannel = ( SocketChannel ) key.channel();
-                    clientChannel.configureBlocking( false );
+                try {
+                    if ( key.isAcceptable() ) {
+                        registerClient( key );
+                        // a connection was accepted by a ServerSocketChannel.
+                        LOGGER.info( "Key [{}] is Acceptable", key );
+                    } else if ( key.isConnectable() ) {
+                        // a connection was established with a remote server.
+                        LOGGER.info( "Key [{}] is Connectable", key );
+                    } else if ( key.isReadable() ) {
+                        LOGGER.info( "Key [{}] is Readable", key );
+                        doRead( key );
+                    } else if ( key.isWritable() ) {
+                        // a channel is ready for writing
+                        LOGGER.info( "Key [{}] is Writable", key );
+                    }
 
-
-                    ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
-                    clientChannel.read( buf );
-                    buf.flip();
-                    ByteBufferUtils.printByteBuffer( buf );
-
-                    // a channel is ready for reading
-                    LOGGER.info( "Key [{}] is Readable", key );
-
-                } else if ( key.isWritable() ) {
-                    // a channel is ready for writing
-                    LOGGER.info( "Key [{}] is Writable", key );
+                    keyIterator.remove();
+                    LOGGER.info( "Key [{}] is removed", key );
+                } catch ( IOException ex ) {
+                    key.channel().close();
+                    keyIterator.remove();
                 }
-
-                keyIterator.remove();
-                LOGGER.info( "Key [{}] is removed", key );
             }
         } catch ( IOException e ) {
             LOGGER.error( e );
         }
 
 
+    }
+
+    private void doRead( SelectionKey key ) throws IOException {
+        SocketChannel clientChannel = ( SocketChannel ) key.channel();
+        clientChannel.configureBlocking( false );
+        ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
+        clientChannel.read( buf );
+        ByteBufferUtils.printByteBuffer( buf );
     }
 
     private void registerClient( SelectionKey selectedKey ) throws IOException {

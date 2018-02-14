@@ -95,14 +95,25 @@ public class ServerClient extends Processor {
                     return toIdentification();
                 } else {
                     LOGGER.info( "Connection failed" );
-                    return ClientServerProtocolState.CLOSED;
+                    return doClose();
                 }
             }
         } catch ( IOException e ) {
             LOGGER.error( "Connection failed", e );
-            return ClientServerProtocolState.CLOSED;
+            return doClose();
         }
         return toIdentification();
+    }
+
+    private ClientServerProtocolState doClose() {
+        try {
+            if ( this.channel.isOpen() ) {
+                this.channel.close();
+            }
+        } catch ( IOException e ) {
+            LOGGER.error( "", e );
+        }
+        return ClientServerProtocolState.CLOSED;
     }
 
     private ClientServerProtocolState toIdentification() {
