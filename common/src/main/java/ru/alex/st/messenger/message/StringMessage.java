@@ -2,10 +2,16 @@ package ru.alex.st.messenger.message;
 
 public class StringMessage implements Message {
 
+    private static final MessageType type = MessageType.STRING;
+
     private String message;
 
     public StringMessage( String message ) {
         this.message = message;
+    }
+
+    public StringMessage( byte[] bytes ) {
+        this.message = new String( bytes );
     }
 
     public String getMessage() {
@@ -17,17 +23,35 @@ public class StringMessage implements Message {
         return this;
     }
 
+    public StringMessage setMessage( byte[] bytes ) {
+        this.message = new String( bytes );
+        return this;
+    }
+
+
     @Override
     public MessageType getMessageType() {
-        return MessageType.STRING;
+        return type;
+    }
+
+    @Override
+    public byte[] getMessageBytes() {
+        return getMessage().getBytes();
     }
 
     @Override
     public byte[] getBytes() {
+        byte[] messageBytes = message.getBytes();
+        byte[] result = new byte[ messageBytes.length + 1 ];
+        result[ 0 ] = type.getCode();
+        //TODO
+        System.arraycopy( messageBytes, 0, result, 1, messageBytes.length );
         if ( message != null ) {
-            return message.getBytes();
+            return result;
         } else {
-            return new byte[ 0 ];
+            return new byte[]{ type.getCode() };
         }
     }
+
+
 }

@@ -3,6 +3,7 @@ package ru.alex.st.server.net;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.alex.st.messenger.common.Processor;
+import ru.alex.st.messenger.message.Message;
 import ru.alex.st.messenger.utils.ByteBufferUtils;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class MainServer extends Processor {
 
@@ -28,9 +30,12 @@ public class MainServer extends Processor {
 
     private static final long ITERATION_INTERVAL = 1000;
 
-    public MainServer( int port ) {
+    private Consumer<ByteBuffer> messageConsumer;
+
+    public MainServer( int port, Consumer<ByteBuffer> messageConsumer ) {
         super( "ServerThread", 0 );
         this.port = port;
+        this.messageConsumer = messageConsumer;
         try {
             this.selector = Selector.open();
             ServerSocketChannel channel = ServerSocketChannel.open();
@@ -57,7 +62,6 @@ public class MainServer extends Processor {
                 Thread.sleep( ITERATION_INTERVAL );
                 return;
             }
-
 
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
@@ -99,8 +103,10 @@ public class MainServer extends Processor {
         SocketChannel clientChannel = ( SocketChannel ) key.channel();
         clientChannel.configureBlocking( false );
         ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
-        clientChannel.read( buf );
+        //TODO count read bytes
+        int readBytes = clientChannel.read( buf );
         ByteBufferUtils.printByteBuffer( buf );
+        messageConsumer.accept( buf );
     }
 
     private void registerClient( SelectionKey selectedKey ) throws IOException {

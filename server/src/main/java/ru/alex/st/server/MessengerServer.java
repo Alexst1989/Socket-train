@@ -1,6 +1,9 @@
 package ru.alex.st.server;
 
 import ru.alex.st.messenger.common.ProcessorHolder;
+import ru.alex.st.messenger.message.StringMessagePrinter;
+import ru.alex.st.server.decoders.DecoderHolder;
+import ru.alex.st.server.decoders.StringMessageDecoder;
 import ru.alex.st.server.net.MainServer;
 import ru.alex.st.server.net.MessangerServerException;
 
@@ -21,6 +24,8 @@ public class MessengerServer {
             throw new MessangerServerException( "Can't load properties", e );
         }
         int port = Integer.valueOf( ( String ) props.get( "port" ) );
+        //TODO finish with decoder
+        DecoderHolder dh = new DecoderHolder( new StringMessageDecoder( ) );
         processorHolder.addProcessor( new MainServer( port ) );
     }
 

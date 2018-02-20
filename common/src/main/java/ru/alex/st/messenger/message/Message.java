@@ -3,12 +3,38 @@ package ru.alex.st.messenger.message;
 
 public interface Message {
 
-    MessageType getMessageType();
+    enum MessageType {
+        BYTES( ( byte ) 0 ),
+        STRING( ( byte ) 1 ),
+        UNKNOWN( ( byte ) -128 );
+
+        private byte code;
+
+        MessageType( byte code ) {
+            this.code = code;
+        }
+
+        public byte getCode() {
+            return code;
+        }
+
+        public static MessageType getByCode( byte code ) {
+            for ( MessageType type : values() ) {
+                if ( type.code == code ) {
+                    return type;
+                }
+            }
+            return MessageType.UNKNOWN;
+        }
+
+    }
 
     byte[] getBytes();
 
-    enum MessageType {
-        STRING, BYTES;
+    default MessageType getMessageType() {
+        return MessageType.BYTES;
     }
+
+    byte[] getMessageBytes();
 
 }
