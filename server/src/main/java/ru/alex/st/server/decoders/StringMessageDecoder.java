@@ -3,6 +3,8 @@ package ru.alex.st.server.decoders;
 import ru.alex.st.messenger.message.Message;
 import ru.alex.st.messenger.message.StringMessage;
 
+import java.nio.ByteBuffer;
+
 public class StringMessageDecoder implements Decoder<StringMessage> {
 
     @Override
@@ -11,8 +13,9 @@ public class StringMessageDecoder implements Decoder<StringMessage> {
     }
 
     @Override
-    public StringMessage decode( Message message ) {
-        return new StringMessage( message.getMessageBytes() );
+    public StringMessage decode( ByteBuffer buffer ) {
+        return new StringMessage( getBytesFromBuffer( buffer ) );
     }
+
 
 }

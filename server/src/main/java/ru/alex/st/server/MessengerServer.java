@@ -1,6 +1,8 @@
 package ru.alex.st.server;
 
 import ru.alex.st.messenger.common.ProcessorHolder;
+import ru.alex.st.messenger.message.Message;
+import ru.alex.st.messenger.message.MessageSplitter;
 import ru.alex.st.messenger.message.StringMessagePrinter;
 import ru.alex.st.server.decoders.DecoderHolder;
 import ru.alex.st.server.decoders.StringMessageDecoder;
@@ -24,9 +26,9 @@ public class MessengerServer {
             throw new MessangerServerException( "Can't load properties", e );
         }
         int port = Integer.valueOf( ( String ) props.get( "port" ) );
-        //TODO finish with decoder
-        DecoderHolder dh = new DecoderHolder( new StringMessageDecoder( ) );
-        processorHolder.addProcessor( new MainServer( port ) );
+        DecoderHolder dh = new DecoderHolder( new StringMessageDecoder() );
+        MessageSplitter splitter = new MessageSplitter().addConsumer( Message.MessageType.STRING, new StringMessagePrinter() );
+        processorHolder.addProcessor( new MainServer( port, dh, splitter ) );
     }
 
     public void start() {

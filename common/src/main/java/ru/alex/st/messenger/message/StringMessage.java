@@ -1,5 +1,7 @@
 package ru.alex.st.messenger.message;
 
+import ru.alex.st.messenger.utils.ArrayUtils;
+
 public class StringMessage implements Message {
 
     private static final MessageType type = MessageType.STRING;
@@ -11,7 +13,8 @@ public class StringMessage implements Message {
     }
 
     public StringMessage( byte[] bytes ) {
-        this.message = new String( bytes );
+        checkMessageType( bytes[ 0 ] );
+        this.message = new String( ArrayUtils.getExcaptType( bytes ) );
     }
 
     public String getMessage() {
@@ -44,7 +47,6 @@ public class StringMessage implements Message {
         byte[] messageBytes = message.getBytes();
         byte[] result = new byte[ messageBytes.length + 1 ];
         result[ 0 ] = type.getCode();
-        //TODO
         System.arraycopy( messageBytes, 0, result, 1, messageBytes.length );
         if ( message != null ) {
             return result;

@@ -17,6 +17,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class MainServer extends Processor {
 
@@ -30,12 +31,15 @@ public class MainServer extends Processor {
 
     private static final long ITERATION_INTERVAL = 1000;
 
-    private Consumer<ByteBuffer> messageConsumer;
+    private Consumer<Message> messageConsumer;
 
-    public MainServer( int port, Consumer<ByteBuffer> messageConsumer ) {
+    private Function<ByteBuffer, Message> decoder;
+
+    public MainServer( int port, Function<ByteBuffer, Message> decoder, Consumer<Message> messageConsumer ) {
         super( "ServerThread", 0 );
         this.port = port;
         this.messageConsumer = messageConsumer;
+        this.decoder = decoder;
         try {
             this.selector = Selector.open();
             ServerSocketChannel channel = ServerSocketChannel.open();
@@ -105,8 +109,9 @@ public class MainServer extends Processor {
         ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
         //TODO count read bytes
         int readBytes = clientChannel.read( buf );
-        ByteBufferUtils.printByteBuffer( buf );
-        messageConsumer.accept( buf );
+//        ByteBufferUtils.printByteBuffer( buf );
+        Message message = decoder.apply( buf );
+        messageConsumer.accept( message );
     }
 
     private void registerClient( SelectionKey selectedKey ) throws IOException {

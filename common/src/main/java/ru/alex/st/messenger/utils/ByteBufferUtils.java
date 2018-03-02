@@ -35,5 +35,13 @@ public class ByteBufferUtils {
         }
     }
 
+    private boolean isReadyForRead( ByteBuffer b ) {
+        return b.position() >= 0 && b.limit() < b.capacity();
+    }
+
+//    private ByteBuffer prepareForRead( ByteBuffer b ) {
+//
+//    }
+
 
 }

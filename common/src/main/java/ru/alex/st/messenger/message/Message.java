@@ -35,6 +35,13 @@ public interface Message {
         return MessageType.BYTES;
     }
 
+    default void checkMessageType( byte code ) {
+        MessageType type = MessageType.getByCode( code );
+        if ( this.getMessageType() != type ) {
+            throw new IncorrectMessageTypeException( String.format( "Message type does not equal %s", type ) );
+        }
+    }
+
     byte[] getMessageBytes();
 
 }
