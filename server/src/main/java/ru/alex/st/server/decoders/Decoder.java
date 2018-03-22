@@ -8,7 +8,7 @@ public interface Decoder<T extends Message> {
 
     byte getDecodedMessageCode();
 
-    T decode( ByteBuffer message );
+    T[] decode( ByteBuffer message );
 
 
     /**

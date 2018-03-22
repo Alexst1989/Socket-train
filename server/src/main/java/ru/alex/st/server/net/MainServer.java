@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.alex.st.messenger.common.Processor;
 import ru.alex.st.messenger.message.Message;
-import ru.alex.st.messenger.utils.ByteBufferUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,19 +22,19 @@ public class MainServer extends Processor {
 
     private static final Logger LOGGER = LogManager.getLogger( MainServer.class );
 
+
     private int port;
 
     private ServerSocket socket;
-
     private Selector selector;
 
     private static final long ITERATION_INTERVAL = 1000;
 
     private Consumer<Message> messageConsumer;
 
-    private Function<ByteBuffer, Message> decoder;
+    private Function<ByteBuffer, Message[]> decoder;
 
-    public MainServer( int port, Function<ByteBuffer, Message> decoder, Consumer<Message> messageConsumer ) {
+    public MainServer( int port, Function<ByteBuffer, Message[]> decoder, Consumer<Message> messageConsumer ) {
         super( "ServerThread", 0 );
         this.port = port;
         this.messageConsumer = messageConsumer;
@@ -108,11 +107,15 @@ public class MainServer extends Processor {
         clientChannel.configureBlocking( false );
         ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
         //TODO count read bytes
+        //TODO reads all messages from channel like one
         int readBytes = clientChannel.read( buf );
-//        ByteBufferUtils.printByteBuffer( buf );
-        Message message = decoder.apply( buf );
+        Message[] message = decoder.apply( buf );
+
         messageConsumer.accept( message );
     }
+
+
+    private byte[][] splitStickedMessages( ByteBuffer )
 
     private void registerClient( SelectionKey selectedKey ) throws IOException {
         ServerSocketChannel channel = ( ServerSocketChannel ) selectedKey.channel();

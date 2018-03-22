@@ -35,13 +35,14 @@ public class ByteBufferUtils {
         }
     }
 
-    private boolean isReadyForRead( ByteBuffer b ) {
-        return b.position() >= 0 && b.limit() < b.capacity();
+    public static byte[] getLongBytes( long value ) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect( 8 );
+        buffer.putLong( value );
+        byte[] result = new byte[8];
+        buffer.flip();
+        buffer.get( result );
+        return result;
     }
-
-//    private ByteBuffer prepareForRead( ByteBuffer b ) {
-//
-//    }
 
 
 }

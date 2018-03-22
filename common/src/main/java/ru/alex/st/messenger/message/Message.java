@@ -31,6 +31,8 @@ public interface Message {
 
     byte[] getBytes();
 
+    long length();
+
     default MessageType getMessageType() {
         return MessageType.BYTES;
     }

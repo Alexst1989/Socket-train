@@ -8,9 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class DecoderHolder implements Function<ByteBuffer, Message> {
+public class DecoderHolder implements Function<ByteBuffer, Message[]> {
 
     private Map<Byte, Decoder> decoderMap = new HashMap<>();
+
+    private static final char SOH = '\u0001';
 
     public DecoderHolder( Decoder... decoders ) {
         for ( Decoder decoder : decoders ) {
@@ -23,7 +25,8 @@ public class DecoderHolder implements Function<ByteBuffer, Message> {
     }
 
     @Override
-    public Message apply( ByteBuffer buffer ) {
+    public Message[] apply( ByteBuffer buffer ) {
+        //TODO split messages by SOH here then decode
         buffer.flip();
         byte typeByte = buffer.get( 0 );
         Decoder decoder = decoderMap.get( typeByte );
@@ -31,5 +34,12 @@ public class DecoderHolder implements Function<ByteBuffer, Message> {
             throw new MessangerServerException( "Unsupported message type" );
         }
         return decoder.decode( buffer );
+    }
+
+    private byte[][] splitStickedMessages( ByteBuffer buffer ) {
+        //TODO need length of message here
+
+
+        return null;
     }
 }

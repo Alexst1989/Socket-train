@@ -14,6 +14,7 @@ public class StringMessageDecoder implements Decoder<StringMessage> {
 
     @Override
     public StringMessage decode( ByteBuffer buffer ) {
+        
         return new StringMessage( getBytesFromBuffer( buffer ) );
     }
 
