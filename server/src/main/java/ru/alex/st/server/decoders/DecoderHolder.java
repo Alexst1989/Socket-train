@@ -40,7 +40,7 @@ public class DecoderHolder implements Function<ByteBuffer, Message[]> {
             bufferOffset += messageLength;
             currentMessage++;
         }
-        LOGGER.debug( "Messages received {}", currentMessage );
+        LOGGER.debug( "Number of Messages received {}", currentMessage );
         return messageList.toArray( new Message[ messageList.size() ] );
     }
 }
