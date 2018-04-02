@@ -18,7 +18,8 @@ public class StringMessage implements Message {
 
     public StringMessage( byte[] bytes ) {
         checkMessageType( bytes[ 0 ] );
-        this.message = new String( ArrayUtils.getExcaptType( bytes ) );
+        this.message = new String( ArrayUtils.getMessageBytes( bytes ) );
+        calcBytes();
     }
 
     public String getMessage() {
@@ -50,30 +51,25 @@ public class StringMessage implements Message {
 
     @Override
     public byte[] getBytes() {
-//        byte[] messageBytes = message.getBytes();
-//        byte[] result = new byte[ messageBytes.length + 1 ];
-//        result[ 0 ] = type.getCode();
-//        System.arraycopy( messageBytes, 0, result, 1, messageBytes.length );
-//        if ( message != null ) {
-//            return result;
-//        } else {
-//            return new byte[]{ type.getCode() };
-//        }
-        if ( bytes != null && bytes.length > 0 ) {
-            return bytes;
+        if ( message == null || message.isEmpty() ) {
+            return new byte[ 0 ];
         } else {
-            calcBytes();
-            return bytes;
+            if ( bytes != null && bytes.length > 0 ) {
+                return bytes;
+            } else {
+                calcBytes();
+                return bytes;
+            }
         }
     }
 
     private void calcBytes() {
         if ( this.message != null ) {
-            this.bytes = new byte[ this.message.length() + 9 ]; //1 byte - type, 8 long length
+            this.bytes = new byte[ this.message.length() + 5 ]; //1 byte - type, 4 int length
             bytes[ 0 ] = type.getCode();
-            byte[] sizeBytes = ByteBufferUtils.getLongBytes( this.message.length() );
+            byte[] sizeBytes = ByteBufferUtils.getIntBytes( this.message.length() );
             System.arraycopy( sizeBytes, 0, this.bytes, 1, sizeBytes.length );
-            System.arraycopy( this.message.getBytes(), 0, this.bytes, 9, this.message.getBytes().length );
+            System.arraycopy( this.message.getBytes(), 0, this.bytes, 5, this.message.getBytes().length );
         }
     }
 

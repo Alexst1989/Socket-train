@@ -1,18 +1,20 @@
 package ru.alex.st.server.decoders;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ru.alex.st.messenger.message.Message;
-import ru.alex.st.server.net.MessangerServerException;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
 public class DecoderHolder implements Function<ByteBuffer, Message[]> {
 
-    private Map<Byte, Decoder> decoderMap = new HashMap<>();
+    private static final Logger LOGGER = LogManager.getLogger( DecoderHolder.class );
 
-    private static final char SOH = '\u0001';
+    private Map<Byte, Decoder> decoderMap = new HashMap<>();
 
     public DecoderHolder( Decoder... decoders ) {
         for ( Decoder decoder : decoders ) {
@@ -26,20 +28,19 @@ public class DecoderHolder implements Function<ByteBuffer, Message[]> {
 
     @Override
     public Message[] apply( ByteBuffer buffer ) {
-        //TODO split messages by SOH here then decode
+        ArrayList<Message> messageList = new ArrayList<>();
+        int currentMessage = 0;
+        int bufferOffset = 1;
         buffer.flip();
-        byte typeByte = buffer.get( 0 );
-        Decoder decoder = decoderMap.get( typeByte );
-        if ( decoder == null ) {
-            throw new MessangerServerException( "Unsupported message type" );
+        while ( buffer.position() < buffer.limit() ) {
+            int messageLength = buffer.getInt( bufferOffset ) + 5;
+            byte[] message = new byte[ messageLength ];
+            buffer.get( message, 0, messageLength );
+            messageList.add( decoderMap.get( message[ 0 ] ).decode( message ) );
+            bufferOffset += messageLength;
+            currentMessage++;
         }
-        return decoder.decode( buffer );
-    }
-
-    private byte[][] splitStickedMessages( ByteBuffer buffer ) {
-        //TODO need length of message here
-
-
-        return null;
+        LOGGER.debug( "Messages received {}", currentMessage );
+        return messageList.toArray( new Message[ messageList.size() ] );
     }
 }

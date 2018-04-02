@@ -8,16 +8,19 @@ public interface Decoder<T extends Message> {
 
     byte getDecodedMessageCode();
 
-    T[] decode( ByteBuffer message );
+    T decode( ByteBuffer message );
+
+    T decode( byte[] byteArray );
 
 
     /**
      * Buffer must be ready for read
+     *
      * @param buffer
      * @return
      */
     default byte[] getBytesFromBuffer( ByteBuffer buffer ) {
-        byte[] byteArray = new byte[ buffer.limit()];
+        byte[] byteArray = new byte[ buffer.limit() ];
         buffer.get( byteArray );
         return byteArray;
     }

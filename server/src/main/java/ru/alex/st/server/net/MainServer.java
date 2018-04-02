@@ -107,15 +107,13 @@ public class MainServer extends Processor {
         clientChannel.configureBlocking( false );
         ByteBuffer buf = ByteBuffer.allocateDirect( 8096 );
         //TODO count read bytes
-        //TODO reads all messages from channel like one
         int readBytes = clientChannel.read( buf );
-        Message[] message = decoder.apply( buf );
-
-        messageConsumer.accept( message );
+        Message[] messageArray = decoder.apply( buf );
+        for ( Message message : messageArray ) {
+            messageConsumer.accept( message );
+        }
     }
 
-
-    private byte[][] splitStickedMessages( ByteBuffer )
 
     private void registerClient( SelectionKey selectedKey ) throws IOException {
         ServerSocketChannel channel = ( ServerSocketChannel ) selectedKey.channel();

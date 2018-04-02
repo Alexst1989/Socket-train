@@ -44,5 +44,14 @@ public class ByteBufferUtils {
         return result;
     }
 
+    public static byte[] getIntBytes( int value ) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect( 8 );
+        buffer.putInt( value );
+        byte[] result = new byte[4];
+        buffer.flip();
+        buffer.get( result );
+        return result;
+    }
+
 
 }

@@ -18,5 +18,10 @@ public class StringMessageDecoder implements Decoder<StringMessage> {
         return new StringMessage( getBytesFromBuffer( buffer ) );
     }
 
+    @Override
+    public StringMessage decode( byte[] byteArray ) {
+        return new StringMessage( byteArray );
+    }
+
 
 }

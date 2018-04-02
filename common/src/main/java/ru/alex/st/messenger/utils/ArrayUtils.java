@@ -4,9 +4,9 @@ import java.nio.ByteBuffer;
 
 public class ArrayUtils {
 
-    public static byte[] getExcaptType( byte[] src ) {
-        byte[] dst = new byte[ src.length - 1 ];
-        System.arraycopy( src, 1, dst, 0, dst.length );
+    public static byte[] getMessageBytes( byte[] src ) {
+        byte[] dst = new byte[ src.length - 5 ];
+        System.arraycopy( src, 5, dst, 0, dst.length );
         return dst;
     }
 
@@ -15,6 +15,13 @@ public class ArrayUtils {
         buffer.put( src, pos, 8 );
         buffer.flip();
         return buffer.getLong();
+    }
+
+    public static int getIntFromBytes( byte[] src, int pos ) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect( 4 );
+        buffer.put( src, pos, 4 );
+        buffer.flip();
+        return buffer.getInt();
     }
 
 }
