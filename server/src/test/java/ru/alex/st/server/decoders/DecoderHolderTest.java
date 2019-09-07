@@ -4,6 +4,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import ru.alex.st.messenger.common.protocol.decoders.DecoderHolder;
+import ru.alex.st.messenger.common.protocol.decoders.StringMessageDecoder;
 import ru.alex.st.messenger.message.Message;
 
 import java.nio.ByteBuffer;

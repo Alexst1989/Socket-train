@@ -1,4 +1,4 @@
-package ru.alex.st.server.decoders;
+package ru.alex.st.messenger.common.protocol.decoders;
 
 import ru.alex.st.messenger.message.Message;
 import ru.alex.st.messenger.message.StringMessage;

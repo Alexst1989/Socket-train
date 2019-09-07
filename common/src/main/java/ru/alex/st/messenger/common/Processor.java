@@ -4,50 +4,31 @@ package ru.alex.st.messenger.common;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 public abstract class Processor extends Thread {
 
     private static final Logger LOGGER = LogManager.getLogger( Processor.class );
 
-    private AtomicBoolean runFlag = new AtomicBoolean( true );
-
     private String name;
 
-    private long iterationInteval;
-
-    protected Processor() {
-    }
-
     protected Processor( String name ) {
-        this( name, 0 );
-    }
-
-    protected Processor( String name, long iterationInteval ) {
         this.name = name;
-        this.iterationInteval = iterationInteval;
     }
 
     @Override
     public void run() {
-        if ( name != null ) {
-            Thread.currentThread().setName( this.name );
+        Thread.currentThread().setName( this.name );
+        try {
+            this.process();
+        } catch ( InterruptedException ex ) {
+            LOGGER.info( "Thread [{}] was interuppted.", this.name );
+            Thread.currentThread().interrupt();
+        } catch ( Throwable ex ) {
+            LOGGER.error( "Unexpected exception occurred", ex );
         }
-        while ( runFlag.get() ) {
-            try {
-                this.process();
-                if ( iterationInteval > 0 ) {
-                    Thread.sleep( iterationInteval );
-                }
-            } catch ( Throwable ex ) {
-                LOGGER.error( "Unexpected exception occurred", ex );
-            }
-        }
-        LOGGER.info( String.format( "Thread [%s] is stopped", Thread.currentThread().getName() ) );
+        LOGGER.info( String.format( "Processor [%s] is stopped", this.name ) );
     }
 
     public void stopProcessor() {
-        runFlag.compareAndSet( true, false );
         this.interrupt();
     }
 

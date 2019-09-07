@@ -1,0 +1,30 @@
+buildscript {
+    repositories {
+        mavenCentral()
+
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "me.champeau.gradle:jmh-gradle-plugin:0.4.7"
+    }
+}
+
+apply plugin: "me.champeau.gradle.jmh"
+version '1.0.0-SNAPSHOT'
+
+dependencies {
+    compile group: 'org.openjdk.jmh', name: 'jmh-core', version: '1.21'
+    testCompile group: 'org.openjdk.jmh', name: 'jmh-generator-annprocess', version: '1.21'
+
+
+    compile project(path: ":server")
+    compile project(path: ":client")
+    
+}
+
+jmh {
+    duplicateClassesStrategy = 'warn'
+}
+

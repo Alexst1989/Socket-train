@@ -1,4 +1,4 @@
-package ru.alex.st.messanger.stub;
+package ru.alex.st.messanger.example;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,9 +20,9 @@ public class StubMessageGenerator extends Processor {
     private String id;
 
     public StubMessageGenerator( String id, Consumer<Message> consumer ) {
+        super( "stub-message-generator" );
         this.id = id;
         this.consumer = consumer;
-
     }
 
     private StringMessage getNextMessage() {
@@ -31,9 +31,11 @@ public class StubMessageGenerator extends Processor {
 
     @Override
     public void process() throws Exception {
-        if ( consumer != null ) {
-            consumer.accept( getNextMessage() );
+        while (!Thread.currentThread().isInterrupted()) {
+            if ( consumer != null ) {
+                consumer.accept( getNextMessage() );
+            }
+            ThreadUtils.sleepFor( 2000 );
         }
-        ThreadUtils.sleepFor( 2000 );
     }
 }

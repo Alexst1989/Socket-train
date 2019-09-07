@@ -1,5 +1,6 @@
 rootProject.name = 'socket-train'
-include 'client'
-include 'server'
-include 'common'
+include ':client'
+include ':server'
+include ':common'
+include ':integration-test'
 

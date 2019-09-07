@@ -2,9 +2,11 @@ package ru.alex.st.messanger.net;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.alex.st.messenger.common.ClientServerProtocol;
-import ru.alex.st.messenger.common.ClientServerProtocol.ClientServerProtocolState;
-import ru.alex.st.messenger.common.Processor;
+import ru.alex.st.messenger.common.NetworkProcessor;
+import ru.alex.st.messenger.common.protocol.ClientServerProtocol;
+import ru.alex.st.messenger.common.protocol.ClientServerProtocol.ClientVsServerProtocolState;
+import ru.alex.st.messenger.common.stat.Counter;
+import ru.alex.st.messenger.common.stat.Stat;
 import ru.alex.st.messenger.message.Message;
 
 import java.io.IOException;
@@ -12,17 +14,13 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 
-/*
+public class ClientVsServerProcessor extends NetworkProcessor {
 
-
-
- */
-
-public class ServerClient extends Processor {
-
-    private static final Logger LOGGER = LogManager.getLogger( ServerClient.class );
+    private static final Logger LOGGER = LogManager.getLogger( ClientVsServerProcessor.class );
 
     private static final int BUFFER_SIZE = 8096;
 
@@ -34,54 +32,52 @@ public class ServerClient extends Processor {
 
     private SocketChannel channel;
 
-    private ByteBuffer writeBuffer;
-
-    private ByteBuffer readBuffer;
-
-    private boolean writeFlipped;
-
-    private ClientClientProtocol clientToClientProtocol;
-
     private ClientServerProtocol clientToServerProtocol = new ClientServerProtocol();
 
     private byte connectionCounter;
 
     private String id;
 
-    private static final byte RECONNECTION_ATTEMTS = 10;
+    private Counter writtenBytes = Stat.getCounter( "bytesToServer" );
 
-    public ServerClient( int port, String id ) {
+    private Counter readBytes = Stat.getCounter( "bytesFromServer" );
+
+    public ClientVsServerProcessor( int port, String id, Function<ByteBuffer, Message[]> decoder, Consumer<Message> messageConsumer ) {
+        super( "client-" + id, decoder, messageConsumer );
         this.port = port;
         this.id = id;
-        this.writeBuffer = ByteBuffer.allocateDirect( BUFFER_SIZE );
-        this.readBuffer = ByteBuffer.allocateDirect( BUFFER_SIZE );
     }
 
     @Override
     public void process() {
-        switch ( clientToServerProtocol.getCurrentState() ) {
-            case READY_TO_WRITE:
-                clientToServerProtocol.setState( doWrite() );
-                break;
-            case IDENTIFICATION:
-                clientToServerProtocol.setState( doAuthenticate() );
-                break;
-            case CLOSED:
-                clientToServerProtocol.setState( doConnect() );
-                break;
-            case WAIT:
-                clientToServerProtocol.setState( doWait( clientToServerProtocol.getCurrentState() ) );
-                break;
+        while ( !Thread.currentThread().isInterrupted() ) {
+            switch ( clientToServerProtocol.getCurrentState() ) {
+                case READY_TO_READ:
+                    clientToServerProtocol.setState( doRead( ClientVsServerProtocolState.READY_TO_WRITE, ClientVsServerProtocolState.CLOSED ) );
+                    break;
+                case READY_TO_WRITE:
+                    clientToServerProtocol.setState( doWrite( ClientVsServerProtocolState.READY_TO_READ, ClientVsServerProtocolState.CLOSED ) );
+                    break;
+                case IDENTIFICATION:
+                    clientToServerProtocol.setState( doAuthenticate() );
+                    break;
+                case CLOSED:
+                    clientToServerProtocol.setState( doConnect() );
+                    break;
+                case WAIT:
+                    clientToServerProtocol.setState( doWait( clientToServerProtocol.getCurrentState() ) );
+                    break;
+            }
         }
     }
 
-    private ClientServerProtocolState doAuthenticate() {
+    private ClientVsServerProtocolState doAuthenticate() {
+        //TODO authentication process
 
-
-        return ClientServerProtocolState.READY_TO_WRITE;
+        return ClientVsServerProtocolState.READY_TO_WRITE;
     }
 
-    private ClientServerProtocolState doConnect() {
+    private ClientVsServerProtocolState doConnect() {
         onConnectionNextAttempt();
         try {
             channel = SocketChannel.open();
@@ -105,7 +101,7 @@ public class ServerClient extends Processor {
         return toIdentification();
     }
 
-    private ClientServerProtocolState doClose() {
+    private ClientVsServerProtocolState doClose() {
         try {
             if ( this.channel.isOpen() ) {
                 this.channel.close();
@@ -113,12 +109,12 @@ public class ServerClient extends Processor {
         } catch ( IOException e ) {
             LOGGER.error( "", e );
         }
-        return ClientServerProtocolState.CLOSED;
+        return ClientVsServerProtocolState.CLOSED;
     }
 
-    private ClientServerProtocolState toIdentification() {
+    private ClientVsServerProtocolState toIdentification() {
         this.connectionCounter = 0;
-        return ClientServerProtocolState.IDENTIFICATION;
+        return ClientVsServerProtocolState.IDENTIFICATION;
     }
 
     private void onConnectionNextAttempt() {
@@ -138,30 +134,49 @@ public class ServerClient extends Processor {
         }
     }
 
-    private ClientServerProtocolState doWait( ClientServerProtocolState nextState ) {
+    private ClientVsServerProtocolState doWait( ClientVsServerProtocolState nextState ) {
         sleepFor( DEFAULT_SLEEP_MILLIS );
         return nextState;
     }
 
-    private ClientServerProtocolState doWrite() {
+    private ClientVsServerProtocolState doRead( ClientVsServerProtocolState success, ClientVsServerProtocolState fail ) {
+        try {
+            ByteBuffer buffer = writeModeBuffer();
+            long n = this.channel.read( buffer );
+            if ( n > 0 ) {
+                readBytes.inc( n );
+                Message[] m = this.decoder.apply( buffer );
+                for ( Message message : m ) {
+                    messageConsumer.accept( message );
+                }
+            }
+        } catch ( IOException e ) {
+            LOGGER.error( e );
+            return fail;
+        } catch ( Throwable e ) {
+            LOGGER.error( e );
+            return fail;
+        } finally {
 
+        }
+        return success;
+    }
+
+    private ClientVsServerProtocolState doWrite( ClientVsServerProtocolState success, ClientVsServerProtocolState fail ) {
         Message message = null;
         try {
-            //TODO must be sure that connection still alive
             message = deque.take();
         } catch ( InterruptedException e ) {
             LOGGER.error( e );
         }
         if ( message != null ) {
-            return writeToConsummer( message, ClientServerProtocolState.READY_TO_WRITE, ClientServerProtocolState.CLOSED );
+            return writeToConsumer( message, success, fail );
         }
-
-        return ClientServerProtocolState.READY_TO_WRITE;
+        return success;
     }
 
-
-    private ClientServerProtocolState writeToConsummer( Message message, ClientServerProtocolState success,
-                                                        ClientServerProtocolState fail ) {
+    private ClientVsServerProtocolState writeToConsumer( Message message, ClientVsServerProtocolState success,
+                                                         ClientVsServerProtocolState fail ) {
         try {
             byte[] source = message.getBytes();
             int count = partCount( source );
@@ -173,7 +188,7 @@ public class ServerClient extends Processor {
                 }
                 ByteBuffer buffer = writeModeBuffer();
                 buffer.put( source, offset, length );
-                channel.write( readModeBuffer() );
+                writtenBytes.inc( channel.write( readModeBuffer() ) );
                 offset += BUFFER_SIZE;
                 this.clearBuffer();
             }
@@ -189,28 +204,6 @@ public class ServerClient extends Processor {
 
     private int partCount( byte[] array ) {
         return array.length / BUFFER_SIZE + 1;
-    }
-
-    private ByteBuffer writeModeBuffer() {
-        if ( writeFlipped ) {
-            this.writeBuffer.compact();
-            writeFlipped = false;
-        }
-        return this.writeBuffer;
-    }
-
-    private ByteBuffer readModeBuffer() {
-        if ( !writeFlipped ) {
-            this.writeBuffer.flip();
-            writeFlipped = true;
-        }
-        return this.writeBuffer;
-    }
-
-    private ByteBuffer clearBuffer() {
-        this.writeBuffer.clear();
-        writeFlipped = false;
-        return this.writeBuffer;
     }
 
     public void sendMessage( Message message ) {

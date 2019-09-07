@@ -9,6 +9,8 @@ public class StringMessagePrinter implements Consumer<Message> {
 
     private static final Logger LOGGER = LogManager.getLogger( StringMessagePrinter.class );
 
+    private static StringMessagePrinter instance;
+
     @Override
     public void accept( Message stringMessage ) {
         if ( stringMessage instanceof StringMessage ) {
@@ -16,6 +18,13 @@ public class StringMessagePrinter implements Consumer<Message> {
         } else {
             throw new IllegalArgumentException( "Incorrect message type" );
         }
+    }
+
+    public static StringMessagePrinter getInstance() {
+        if (instance == null) {
+            instance = new StringMessagePrinter();
+        }
+        return instance;
     }
 
 }

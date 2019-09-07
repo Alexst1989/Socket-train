@@ -1,4 +1,4 @@
-package ru.alex.st.server.decoders;
+package ru.alex.st.messenger.common.protocol.decoders;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,8 +22,9 @@ public class DecoderHolder implements Function<ByteBuffer, Message[]> {
         }
     }
 
-    public void addDecoder( Decoder decoder ) {
+    public DecoderHolder addDecoder( Decoder decoder ) {
         decoderMap.put( decoder.getDecodedMessageCode(), decoder );
+        return this;
     }
 
     @Override
@@ -42,5 +43,10 @@ public class DecoderHolder implements Function<ByteBuffer, Message[]> {
         }
         LOGGER.debug( "Number of Messages received {}", currentMessage );
         return messageList.toArray( new Message[ messageList.size() ] );
+    }
+
+    public static DecoderHolder getInstance() {
+        return new DecoderHolder(  )
+                .addDecoder( new StringMessageDecoder() );
     }
 }
